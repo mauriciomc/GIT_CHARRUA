@@ -1,0 +1,16 @@
+
+
+.data
+   A - 0
+   B - 1
+   INC - 1
+   END - 255
+
+.inst
+LDI 255
+
+
+LDI 2047   
+STO END
+OK: JMP OK
+

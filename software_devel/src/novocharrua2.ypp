@@ -1,0 +1,1745 @@
+%{
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define TAM_A 200
+#define TAM_B 1000
+#define TAM_PADRAO 33
+
+extern "C" int yylex();
+extern "C" int yyparse();
+extern "C" FILE *yyin;
+extern "C" char *yytext;
+
+
+void yyerror(const char*);
+void int2bin(char str1[],int dec);
+int procura_var (char str[]);
+char procura_label_str (char str[]);
+int procura_label (char str[]);
+
+int i=0;
+int j=0;
+int linha_atual=1;
+
+extern "C" int linha_atual2;
+
+char labels[TAM_B][TAM_A];
+int labels_linhas[TAM_B];
+int ind_labels=0;
+
+char variaveis[TAM_B][TAM_A];
+int variaveis_linhas[TAM_B];
+int ind_variaveis=0;
+
+char escrita[TAM_B][TAM_PADRAO];
+int ind_escrita=0;
+
+char str_aux[TAM_PADRAO];
+char str_aux2[TAM_PADRAO-6];
+
+
+%}
+
+%union{
+        int ival;
+        float fval;
+        char *sval;
+        char sym;
+}
+	 
+%token <ival> NUMBER
+%token <sval> IDENTIFIER 
+
+%token  INSTR_NOP INSTR_STO INSTR_LD INSTR_LDI INSTR_ADD INSTR_ADDI INSTR_SUB INSTR_SUBI INSTR_BEQ INSTR_BNE INSTR_BGT INSTR_BGE INSTR_BLT INSTR_BLE INSTR_JMP INSTR_NOT
+%token  INSTR_AND INSTR_ANDI INSTR_OR INSTR_ORI INSTR_XOR INSTR_XORI INSTR_SLL INSTR_SRL INSTR_STOV INSTR_LDV INSTR_RETURN INSTR_RETINT INSTR_CALL INSTR_UMUL INSTR_UMULI
+%token  INSTR_SMUL INSTR_SMULI INSTR_UDIV INSTR_UDIVI INSTR_SDIV INSTR_SDIVI INSTR_ADDV INSTR_SUBV INSTR_ANDV INSTR_ORV INSTR_XORV INSTR_UMULV INSTR_SMULV INSTR_UDIVV
+%token  INSTR_SDIVV INSTR_INDWR INSTR_COREWR INSTR_BC INSTR_BNC INSTR_BOV INSTR_BNO
+%token  COMMA COLON SEMICOLON HIFEN
+%token  INIC_DADOS INIC_INST
+
+%start program
+
+%%
+
+variavel
+   : IDENTIFIER HIFEN NUMBER { printf("Var encontrada! \n"); 
+			 strcpy(variaveis[ind_variaveis],$<sval>1);
+			 printf("string da var => %s \n",variaveis[ind_variaveis]);
+			 variaveis_linhas[ind_variaveis] = $<ival>3;
+			 printf("endereco da var => %d \n",variaveis_linhas[ind_variaveis]);			 
+			 printf("indice antes => %d  ;;;;",ind_variaveis);			 
+			 ind_variaveis++;
+			 printf(" depois => %d \n",ind_variaveis);
+			 printf("\n");
+			} 
+   ;
+
+label
+   : IDENTIFIER COLON { printf("Label encontrada! \n"); 
+			strcpy(labels[ind_labels],$<sval>1);
+			printf("string da label => %s \n",labels[ind_labels]);			 
+			labels_linhas[ind_labels] = linha_atual;
+			printf("linha da label => %d \n",labels_linhas[ind_labels]);
+			printf("indice antes => %d  ;;;;",ind_labels);			 
+			 ind_labels++;
+			printf(" depois => %d  \n",ind_labels);
+			printf("\n");
+			} 
+   ;
+
+instruction_NOP
+   : INSTR_NOP { strcat(str_aux,$<sval>1);
+		 strcat(str_aux,"00000000000000000000000000");
+		str_aux[33]='\0';		 
+		strcpy(escrita[ind_escrita],str_aux);
+		printf("OPCODE  => %s \n",$<sval>1);
+		printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+		printf("NOP encontrado na linha %d \n",linha_atual); 
+		printf("\n");
+		strcpy(str_aux,"");
+		linha_atual++; ind_escrita++;
+		}
+   ;
+
+instruction_STO
+   : INSTR_STO IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                            //printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+		        strcat(str_aux,saux);
+			str_aux[33]='\0';
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("STO encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_LD
+   : INSTR_LD IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                            //printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("LD encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_LDI
+   : INSTR_LDI NUMBER { int z,m;
+			    strcat(str_aux,$<sval>1);
+			    z = $<ival>2;
+			    int2bin(str_aux2, z);
+			m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                            //printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("LDI encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");strcpy(str_aux2,"");
+		            linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_ADD
+   : INSTR_ADD IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                            //printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("ADD encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");  strcpy(str_aux2,"");  
+			linha_atual++; ind_escrita++;
+			   } 
+   ;
+
+instruction_ADDI
+   : INSTR_ADDI NUMBER { int z,m;
+			    strcat(str_aux,$<sval>1);
+			    z = $<ival>2;
+			    int2bin(str_aux2, z);
+			m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                            //printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("LDI encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");strcpy(str_aux2,"");
+		            linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_SUB
+   : INSTR_SUB IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                            //printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("SUB encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");  strcpy(str_aux2,"");  
+			linha_atual++;  ind_escrita++;
+			   }
+   ;
+
+instruction_SUBI
+   : INSTR_SUBI NUMBER { int z,m;
+			    strcat(str_aux,$<sval>1);
+			    z = $<ival>2;
+			    int2bin(str_aux2, z);
+			m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                            //printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("LDI encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");strcpy(str_aux2,"");
+		            linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_BEQ
+   : INSTR_BEQ IDENTIFIER { strcat(str_aux,$<sval>1);
+			strcat(str_aux,$<sval>2);
+			strcpy(escrita[ind_escrita],str_aux);
+			printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("BEQ com LABEL %s encontrada na linha %d \n",$<sval>2,linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");
+		        linha_atual++; ind_escrita++;
+		      }
+   ;
+
+instruction_BNE
+   : INSTR_BNE IDENTIFIER { strcat(str_aux,$<sval>1);
+			strcat(str_aux,$<sval>2);
+			strcpy(escrita[ind_escrita],str_aux);
+			printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("BNE com LABEL %s encontrada na linha %d \n",$<sval>2,linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");
+		        linha_atual++; ind_escrita++;
+		      }
+   ;
+
+instruction_BGT
+   : INSTR_BGT IDENTIFIER { strcat(str_aux,$<sval>1);
+			strcat(str_aux,$<sval>2);
+			strcpy(escrita[ind_escrita],str_aux);
+			printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("BGT com LABEL %s encontrada na linha %d \n",$<sval>2,linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");
+		        linha_atual++; ind_escrita++;
+		      }
+   ;
+
+instruction_BGE
+   : INSTR_BGE IDENTIFIER { strcat(str_aux,$<sval>1);
+			strcat(str_aux,$<sval>2);
+			strcpy(escrita[ind_escrita],str_aux);
+			printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("BGE com LABEL %s encontrada na linha %d \n",$<sval>2,linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");
+		        linha_atual++; ind_escrita++;
+		      }
+   ;
+
+instruction_BLT
+   : INSTR_BLT IDENTIFIER { strcat(str_aux,$<sval>1);
+			strcat(str_aux,$<sval>2);
+			strcpy(escrita[ind_escrita],str_aux);
+			printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("BLT com LABEL %s encontrada na linha %d \n",$<sval>2,linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");
+		        linha_atual++; ind_escrita++;
+		      }
+   ;
+
+instruction_BLE
+   : INSTR_BLE IDENTIFIER { strcat(str_aux,$<sval>1);
+			strcat(str_aux,$<sval>2);
+			strcpy(escrita[ind_escrita],str_aux);
+			printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("BLE com LABEL %s encontrada na linha %d \n",$<sval>2,linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");
+		        linha_atual++; ind_escrita++;
+		      }
+   ;
+
+instruction_JMP
+   : INSTR_JMP IDENTIFIER { strcat(str_aux,$<sval>1);
+			strcat(str_aux,$<sval>2);
+			strcpy(escrita[ind_escrita],str_aux);
+			printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("JMP com LABEL %s encontrada na linha %d \n",$<sval>2,linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");
+		        linha_atual++; ind_escrita++;
+		      }
+   ;
+
+instruction_NOT
+   : INSTR_NOT  { strcat(str_aux,$<sval>1);
+		 strcat(str_aux,"00000000000000000000000000");
+		 strcpy(escrita[ind_escrita],str_aux);
+		printf("OPCODE  => %s \n",$<sval>1);
+		printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+		printf("NOT encontrado na linha %d \n",linha_atual); 
+		printf("\n");
+		strcpy(str_aux,"");strcpy(str_aux2,"");
+		 linha_atual++;	 ind_escrita++;
+		} 
+   ;
+
+instruction_AND
+   : INSTR_AND IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                           // printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("AND encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++;  ind_escrita++;
+			   } 
+   ;
+
+instruction_ANDI
+   : INSTR_ANDI NUMBER { int z,m;
+			    strcat(str_aux,$<sval>1);
+			    z = $<ival>2;
+			    int2bin(str_aux2, z);
+			m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                            //printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("LDI encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");strcpy(str_aux2,"");
+		            linha_atual++;  ind_escrita++;
+			   }
+   ;
+
+instruction_OR
+   : INSTR_OR IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                            //printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("OR encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++;   ind_escrita++;
+			   }
+   ;
+
+instruction_ORI
+   : INSTR_ORI NUMBER { int z,m;
+			    strcat(str_aux,$<sval>1);
+			    z = $<ival>2;
+			    int2bin(str_aux2, z);
+			m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                            //printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("LDI encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");strcpy(str_aux2,"");
+		            linha_atual++;   ind_escrita++;
+			   }
+   ;
+
+instruction_XOR
+   : INSTR_XOR IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                           // printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("XOR encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++;  ind_escrita++;
+			   }
+   ;
+
+instruction_XORI
+   : INSTR_XORI NUMBER { int z,m;
+			    strcat(str_aux,$<sval>1);
+			    z = $<ival>2;
+			    int2bin(str_aux2, z);
+			m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                            //printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("LDI encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");strcpy(str_aux2,"");
+		            linha_atual++;  ind_escrita++;
+			   }
+   ;
+
+instruction_SLL
+   : INSTR_SLL NUMBER { int z,m;
+			    strcat(str_aux,$<sval>1);
+			    z = $<ival>2;
+			    int2bin(str_aux2, z);
+			m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                            //printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("LDI encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");strcpy(str_aux2,"");
+		            linha_atual++; ind_escrita++;
+			   }
+   | INSTR_SLL IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                            //printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("SLL(VAR) encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");strcpy(str_aux2,"");    
+			linha_atual++;  ind_escrita++;
+			   }
+   ;
+
+instruction_SRL
+   : INSTR_SRL NUMBER { int z,m;
+			    strcat(str_aux,$<sval>1);
+			    z = $<ival>2;
+			    int2bin(str_aux2, z);
+			m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                          //  printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("SRL(NUM) encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");strcpy(str_aux2,"");
+		            linha_atual++;    ind_escrita++;
+			   }
+   | INSTR_SRL IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                          //  printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("SRL(VAR) encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");  strcpy(str_aux2,"");  
+			linha_atual++;  ind_escrita++;
+			   }
+   ;
+
+instruction_STOV
+   : INSTR_STOV IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                           // printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("STOV encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");   strcpy(str_aux2,""); 
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_LDV
+   : INSTR_LDV IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                          //  printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("LDV encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_RETURN
+   : INSTR_RETURN  { strcat(str_aux,$<sval>1);
+		 strcat(str_aux,"00000000000000000000000000");
+		 strcpy(escrita[ind_escrita],str_aux);
+		printf("OPCODE  => %s \n",$<sval>1);
+		printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+		printf("RETURN encontrado na linha %d \n",linha_atual); 
+		printf("\n");
+		strcpy(str_aux,"");
+		 linha_atual++;	 ind_escrita++;
+		}
+   ;
+
+instruction_RETINT
+   : INSTR_RETINT { strcat(str_aux,$<sval>1);
+		 strcat(str_aux,"00000000000000000000000000");
+		 strcpy(escrita[ind_escrita],str_aux);
+		printf("OPCODE  => %s \n",$<sval>1);
+		printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+		printf("RETINT encontrado na linha %d \n",linha_atual); 
+		printf("\n");
+		strcpy(str_aux,"");
+		 linha_atual++;	ind_escrita++;
+		}
+   ;
+
+instruction_CALL
+   : INSTR_CALL IDENTIFIER { strcat(str_aux,$<sval>1);
+			strcat(str_aux,$<sval>2);
+			strcpy(escrita[ind_escrita],str_aux);
+			printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("CALL com LABEL %s encontrada na linha %d \n",$<sval>2,linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");
+		        linha_atual++; ind_escrita++;
+		      }
+   ;
+
+instruction_UMUL
+   : INSTR_UMUL IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                          //  printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("UMUL encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_UMULI
+   : INSTR_UMULI NUMBER { int z,m;
+			    strcat(str_aux,$<sval>1);
+			    z = $<ival>2;
+			    int2bin(str_aux2, z);
+			m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                          //  printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("UMULI encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");strcpy(str_aux2,"");
+		            linha_atual++;  ind_escrita++;
+			   }
+   ;
+
+instruction_SMUL
+   : INSTR_SMUL IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                           // printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("SMUL encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_SMULI
+   : INSTR_SMULI NUMBER { int z,m;
+			    strcat(str_aux,$<sval>1);
+			    z = $<ival>2;
+			    int2bin(str_aux2, z);
+			m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                          //  printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("SMULI encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");strcpy(str_aux2,"");
+		            linha_atual++; ind_escrita++;
+			   }
+   ;
+instruction_UDIV
+   : INSTR_UDIV IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                          //  printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("UDIV encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_UDIVI
+   : INSTR_UDIVI NUMBER { int z,m;
+			    strcat(str_aux,$<sval>1);
+			    z = $<ival>2;
+			    int2bin(str_aux2, z);
+			m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                           // printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("UDIVI encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");strcpy(str_aux2,"");
+		            linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_SDIV
+   : INSTR_SDIV IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                          //  printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("SDIV encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_SDIVI
+   : INSTR_SDIVI NUMBER { int z,m;
+			    strcat(str_aux,$<sval>1);
+			    z = $<ival>2;
+			    int2bin(str_aux2, z);
+			m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                          //  printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("SDIVI encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");strcpy(str_aux2,"");
+		            linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_ADDV
+   : INSTR_ADDV IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                          //  printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("ADDV encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");  strcpy(str_aux2,"");  
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_SUBV
+   : INSTR_SUBV IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                           // printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("SUBV encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");  strcpy(str_aux2,"");  
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_ANDV
+   : INSTR_ANDV IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                          //  printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("ANDV encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_ORV
+   : INSTR_ORV IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                         //   printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("ORV encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_XORV
+   : INSTR_XORV IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                          //  printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("XORV encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_UMULV
+   : INSTR_UMULV IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                          //  printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("UMULV encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_SMULV
+   : INSTR_SMULV IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                        //    printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("SMULV encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_UDIVV
+   : INSTR_UDIVV IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                       //     printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("UDIVV encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+ 
+instruction_SDIVV
+   : INSTR_SDIVV IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                        //    printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("SDIVV encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");  strcpy(str_aux2,"");  
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_INDWR
+   : INSTR_INDWR NUMBER { int z,m;
+			    strcat(str_aux,$<sval>1);
+			    z = $<ival>2;
+			    int2bin(str_aux2, z);
+			m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                         //   printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("INDWR(NUM) encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");strcpy(str_aux2,"");
+		            linha_atual++; ind_escrita++;
+			   }
+   | INSTR_INDWR IDENTIFIER { int z,m;
+
+			    strcat(str_aux,$<sval>1);
+			    z = procura_var($<sval>2);
+			    int2bin(str_aux2, z);
+			    m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                         //   printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("INDWR(VAR) encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,""); strcpy(str_aux2,"");   
+			linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_COREWR
+   : INSTR_COREWR NUMBER { int z,m;
+			    strcat(str_aux,$<sval>1);
+			    z = $<ival>2;
+			    int2bin(str_aux2, z);
+			m=26;
+              			//completando os zeros ateh 26 bits
+                            m = m - strlen(str_aux2);
+                          //  printf("m = %d\n",m);
+
+                            char saux[26]="";
+                          
+                            while(m!=0)
+                            {
+                                strcat(saux,"0");
+                                m--;
+                            }
+                            //completa os 26 bits
+                            strcat(saux,str_aux2);
+
+				strcat(str_aux,saux);
+			strcpy(escrita[ind_escrita],str_aux);
+		      	printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("COREWR encontrado na linha %d \n",linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");strcpy(str_aux2,"");
+		            linha_atual++; ind_escrita++;
+			   }
+   ;
+
+instruction_BC
+   : INSTR_BC IDENTIFIER { strcat(str_aux,$<sval>1);
+			strcat(str_aux,$<sval>2);
+			strcpy(escrita[ind_escrita],str_aux);
+			printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("BC com LABEL %s encontrada na linha %d \n",$<sval>2,linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");
+		        linha_atual++; ind_escrita++;
+		      }
+   ;
+
+instruction_BNC
+   : INSTR_BNC IDENTIFIER { strcat(str_aux,$<sval>1);
+			strcat(str_aux,$<sval>2);
+			strcpy(escrita[ind_escrita],str_aux);
+			printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("BNC com LABEL %s encontrada na linha %d \n",$<sval>2,linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");
+		        linha_atual++; ind_escrita++;
+		      }
+   ;
+
+instruction_BOV
+   : INSTR_BOV IDENTIFIER { strcat(str_aux,$<sval>1);
+			strcat(str_aux,$<sval>2);
+			strcpy(escrita[ind_escrita],str_aux);
+			printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("BOV com LABEL %s encontrada na linha %d \n",$<sval>2,linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");
+		        linha_atual++; ind_escrita++;
+		      }
+   ;
+
+instruction_BNO
+   : INSTR_BNO IDENTIFIER { strcat(str_aux,$<sval>1);
+			strcat(str_aux,$<sval>2);
+			strcpy(escrita[ind_escrita],str_aux);
+			printf("OPCODE  => %s \n",$<sval>1);
+			printf("STRING a ser escrita  => %s \n",escrita[ind_escrita]);
+			printf("BNO com LABEL %s encontrada na linha %d \n",$<sval>2,linha_atual); 
+			printf("\n");
+			strcpy(str_aux,"");
+		        linha_atual++; ind_escrita++;
+		      }
+   ;
+
+instruction
+   : instruction_NOP
+   | instruction_STO
+   | instruction_LD
+   | instruction_LDI
+   | instruction_ADD
+   | instruction_ADDI
+   | instruction_SUB
+   | instruction_SUBI
+   | instruction_BEQ
+   | instruction_BNE 
+   | instruction_BGT
+   | instruction_BGE
+   | instruction_BLT
+   | instruction_BLE
+   | instruction_JMP
+   | instruction_NOT
+   | instruction_AND
+   | instruction_ANDI
+   | instruction_OR
+   | instruction_ORI
+   | instruction_XOR
+   | instruction_XORI
+   | instruction_SLL
+   | instruction_SRL
+   | instruction_STOV
+   | instruction_LDV
+   | instruction_RETURN
+   | instruction_RETINT
+   | instruction_CALL
+   | instruction_UMUL
+   | instruction_UMULI
+   | instruction_SMUL
+   | instruction_SMULI
+   | instruction_UDIV
+   | instruction_UDIVI
+   | instruction_SDIV
+   | instruction_SDIVI
+   | instruction_ADDV
+   | instruction_SUBV
+   | instruction_ANDV
+   | instruction_ORV
+   | instruction_XORV
+   | instruction_UMULV
+   | instruction_SMULV
+   | instruction_UDIVV
+   | instruction_SDIVV
+   | instruction_INDWR
+   | instruction_COREWR
+   | instruction_BC
+   | instruction_BNC
+   | instruction_BOV
+   | instruction_BNO
+   | INIC_DADOS { printf("\nachei .dados!\n\n")} 
+   | INIC_INST { printf("achei .inst!\n\n")}
+   ;
+
+program
+   : instruction
+   | variavel
+   | label
+   | program instruction 
+   | program label 
+   | program variavel
+   ;
+%%
+
+void yyerror(const char * message)
+{
+   printf(message);
+   printf(" linha: %d\n" , linha_atual2);
+}
+
+void int2bin(char str1[],int dec) //usa uma string de manipulacao do main
+{
+    char str2[26]="";
+
+    if (dec / 2 >= 1)
+    {
+        int2bin(str1,dec / 2);
+        sprintf(str2, "%d", (dec % 2));
+        puts(str2);
+        strcat(str1,str2);
+    }
+
+    if (dec == 1)
+    {
+        strcat(str1,"1");
+    }
+}
+
+int procura_var (char str[])
+{int k;
+   for(k=0 ; k<TAM_B; k++ )
+	{if(!strcmp(str,variaveis[k]))
+	   return variaveis_linhas[k];	
+	}
+}
+
+char procura_label_str(char str[])
+ {
+if((str[6]!='1')&&(str[6]!='0')) return 's';
+   else return 'n';
+}
+
+int procura_label (char str[])
+{
+int k;
+   for(k=0 ; k<TAM_B; k++ )
+	{if(!strcmp(str,labels[k]))
+	   return labels_linhas[k];	
+	}
+}
+
+
+int main(int argc, char **argv)
+{
+
+FILE *arq_saida;
+
+arq_saida = fopen("saida2.txt" , "w+");
+
+char str_aux_escrita[32];
+
+strcpy(str_aux,"");
+strcpy(str_aux2,"");
+strcpy(str_aux_escrita,"");
+
+//INICIALIZACOES
+
+for (i=0 ; i<TAM_B ; i++)
+{
+   strcpy(labels[i],"");  
+   strcpy(variaveis[i],""); 
+   strcpy(escrita[i],"valor inicial x");
+   labels_linhas[i]=0;
+   variaveis_linhas[i]=0;
+}
+
+  if(argc == 2)
+   {
+      if((yyin = fopen(argv[1], "rb")) != NULL)
+      {
+         yyparse();
+         fclose(yyin);
+
+	printf("\n\n ******** FIM PARSER **** \n\n ");
+      }
+   }
+
+
+
+
+for (i=0 ; i<TAM_B ; i++)
+{
+
+if(!strcmp(escrita[i],"valor inicial x"))
+	{printf("\nFim encontrado!\n");break;} 
+
+char ch;
+ch=procura_label_str(escrita[i]);
+
+printf("\nLINHA ESCRITA => %s \n",escrita[i]);   
+printf("\n =>%c \n",ch);
+
+
+
+if (ch == 's')
+{
+printf("\nLABEL@@@\n");
+
+for(j=0; j<TAM_PADRAO-6 ; j++)	 
+	    str_aux2[j]=escrita[i][j+6];
+printf("\nSTR ALTERADA =>%s \n",str_aux2);   
+
+int num;
+num = procura_label(str_aux2);
+printf("::::linha da label::::::->%d \n",num);
+
+strcpy(str_aux2,"");strcpy(str_aux,"");  
+
+
+	int2bin(str_aux2, num);
+	int m; m=26;
+	//completando os zeros ateh 26 bits
+	m = m - strlen(str_aux2);
+
+        char saux[26]="";
+                          
+        while(m!=0)
+       {
+         strcat(saux,"0");
+         m--;
+       }
+       
+       //completa os 26 bits
+       strcat(saux,str_aux2);
+       
+printf("\nSTR ALTERADA 2=>%s \n",saux);
+
+for(j=0; j<TAM_PADRAO-6 ; j++)	 
+	    escrita[i][j+6]=saux[j];
+printf("\nALTERADA LABEL LINHA ESCRITA => %s \n",escrita[i]);
+}
+
+  
+ 
+fputs(escrita[i],arq_saida);
+fputc('\n',arq_saida);
+}
+
+
+printf("\n ***** FIM DO PROGRAMA! *****\n");
+
+fclose(arq_saida);
+
+
+return 0;
+}
